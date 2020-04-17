@@ -74,6 +74,14 @@ class Pawn:
         return False
 
     def turn(self):
-        if self.try_capture_left(): return True
-        if self.try_capture_right(): return True
-        if self.space_safe(self.loc[0] + self.forward, self.loc[1]): self.try_move()
+        if self.try_capture_left(): 
+            return True
+            dlog("cap left")
+        if self.try_capture_right(): 
+            return True
+            dlog("cap right")
+        if self.space_safe(self.loc[0] + self.forward, self.loc[1]): 
+            self.try_move()
+            dlog("move")
+        else:
+            dlog("wait")
