@@ -5,6 +5,10 @@ def dlog(s):
     if DEBUG > 0: log(s)
 
 class Lord:
+    SPACING = 2
+    PULSE = 3
+    IGNORE = 7
+    INDEX = 2
 
     def __init__(self, bs, t):
         self.board_size = bs
@@ -16,6 +20,20 @@ class Lord:
         self.left = self.forward * 1
         self.right = self.forward * -1
         self.round = 0
+        self.targets = self.generate_targets()
+
+    def pillar_influence(self):
+        return 1 + self.SPACING
+
+    def generate_targets(self):
+        start = self.INDEX + 1
+        end = self.board_size - self.IGNORE + self.INDEX
+        spaces = list(range(start, end, self.pillar_influence()))
+        arr = []
+        for s in spaces:
+            for _ in range(self.PULSE):
+                arr.append(s)
+        return arr
 
     def board(self):
         return get_board()
@@ -73,9 +91,10 @@ class Lord:
 
     def turn(self):
         self.round = self.round + 1
-        scores = [(self.score_col(c), c) for c in range(self.board_size)] 
-        # sorts in place by highest score first, then orders equal scores randomly
-        scores.sort(reverse=True, key=lambda x:(x[0], random.randint(0, self.board_size)))
-        dlog("scores: " + str(scores))
-        for _,c in scores:
-            if self.try_spawn(c): break
+        for i in range(0, self.pillar_influence()):
+            for _ in self.targets:
+                c = self.targets[self.round % len(self.targets)]
+                c = (c + i) % self.board_size
+                if c < self.INDEX: c += self.INDEX
+                if self.try_spawn(c): return
+                self.round = self.round + 1

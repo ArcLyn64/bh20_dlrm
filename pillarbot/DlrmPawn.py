@@ -115,6 +115,7 @@ class Pawn:
     CAPTURE_VALUE = 6
     DANGER_VALUE = -3
     MOVE_VALUE = 2
+    DOUBLED_VALUE = 2
 
     def score_action(self, action):
         """
@@ -152,6 +153,7 @@ class Pawn:
         r += self.forward
         score = self.MOVE_VALUE
         if not self.space_safe(r, c): score += self.DANGER_VALUE
+        if self.check_doubled(): score += self.DOUBLED_VALUE
         return score
 
     def score_wait(self):
