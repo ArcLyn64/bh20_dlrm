@@ -4,7 +4,7 @@ import random
 # This is an example bot written by the developers!
 # Use this to help write your own code, or run it against your bot to see how well you can do!
 
-DEBUG = 1
+DEBUG = 0
 def dlog(str):
     if DEBUG > 0:
         log(str)
@@ -19,7 +19,6 @@ def check_space_wrapper(r, c, board_size):
     except:
         return None
 
-team_g = get_team()
 
 def turn():
     """
@@ -31,9 +30,8 @@ def turn():
 
     team = get_team()
     opp_team = Team.WHITE if team == Team.BLACK else team.BLACK
-    # dlog('Team: ' + str(team))
-    dlog('Team global check: ' + str(team_g))
-
+    dlog('Team: ' + str(team))
+    
     robottype = get_type()
     dlog('Type: ' + str(robottype))
 
