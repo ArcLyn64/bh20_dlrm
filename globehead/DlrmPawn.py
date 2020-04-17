@@ -169,10 +169,12 @@ class Pawn:
 
 
     def turn(self):
+        # what actions can we perform?
         actions = [self.wait]
         if self.can_capture_left(): actions.append(self.try_capture_left)
         if self.can_capture_right(): actions.append(self.try_capture_right)
         if self.can_move(): actions.append(self.try_move)
+
         scores = [(self.score_action(a), a) for a in actions]
         # sort by highest score, then randomly
         scores.sort(reverse=True, key=lambda x:(x[0], random.randint(0, len(actions))))

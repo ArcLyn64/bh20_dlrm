@@ -27,12 +27,33 @@ class Lord:
         except:
             return None
 
+    def check_loc(self, loc):
+        return self.check_space(loc[0], loc[1])
+
     def check_inbounds(self, r, c):
         return 0 <= r < self.board_size and 0 <= c < self.board_size
+
+    def space_safe(self, r, c):
+        """
+        A space is safe if it is protected by an ally or not attacked by an enemy
+        """
+        # check if the space is defended by friendly pawn
+        friend_left = (r - self.forward, c + self.left)
+        friend_right = (r - self.forward, c + self.right)
+        if self.check_loc(friend_left) == self.team or self.check_loc(friend_right) == self.team:
+            return True
+        # check if the space is under attack
+        enemy_left = (r + self.forward, c + self.left)
+        enemy_right = (r + self.forward, c + self.right)
+        if self.check_loc(enemy_left) == self.opp_team or self.check_loc(enemy_right) == self.opp_team:
+            return False
+        return True
 
     def score_col(self, c):
         if self.check_space(self.targetrow, c) == self.team:
             return -1 # we finished this row, naive row by row strat doesn't want to use it
+        if not self.space_safe(self.spawnrow, c):
+            return -2 # don't waste a turn getting immediately killed
         loc = self.spawnrow + 1
         for dist in range(self.board_size, 1, -1):
             check = self.check_space(loc, c)
