@@ -19,6 +19,8 @@ def check_space_wrapper(r, c, board_size):
     except:
         return None
 
+team_g = get_team()
+
 def turn():
     """
     MUST be defined for robot to run
@@ -29,7 +31,8 @@ def turn():
 
     team = get_team()
     opp_team = Team.WHITE if team == Team.BLACK else team.BLACK
-    dlog('Team: ' + str(team))
+    # dlog('Team: ' + str(team))
+    dlog('Team global check: ' + str(team_g))
 
     robottype = get_type()
     dlog('Type: ' + str(robottype))
