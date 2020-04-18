@@ -8,6 +8,8 @@ VIEW_DIST = 2
 
 class Pawn:
 
+    WAIT_BEFORE_CAPTURE = 5
+
     def __init__(self, bs, t):
         self.board_size = bs
         self.team = t
@@ -17,6 +19,7 @@ class Pawn:
         self.forward = 1 if self.team == Team.WHITE else -1
         self.left = self.forward * 1
         self.right = self.forward * -1
+        self.capture_timer = self.WAIT_BEFORE_CAPTURE
 
     def loc(self):
         return get_location()
@@ -112,10 +115,9 @@ class Pawn:
     """
 
     WAIT_SCORE = 0
-    CAPTURE_VALUE = 8
-    DANGER_VALUE = -3
-    MOVE_VALUE = 2
-    DOUBLED_VALUE = 2
+    CAPTURE_SCORE = 6
+    DANGER_SCORE = -3
+    MOVE_SCORE = 2
 
     def score_action(self, action):
         """
@@ -144,16 +146,22 @@ class Pawn:
         r, c = self.loc()
         r += self.forward
         c += self.right if isRight else self.left
-        score = self.CAPTURE_VALUE
-        if not self.space_safe(r, c): score += self.DANGER_VALUE
+        score = self.CAPTURE_SCORE
+        if not self.space_safe(r, c): score += self.DANGER_SCORE
         return score
 
     def score_move(self):
         r, c = self.loc()
         r += self.forward
-        score = self.MOVE_VALUE
-        if not self.space_safe(r, c): score += self.DANGER_VALUE
-        if self.check_doubled(): score += self.DOUBLED_VALUE
+        if r == self.targetrow:
+            if not self.capture_timer <= 0:
+                self.capture_timer = self.capture_timer - 1
+                return self.WAIT_SCORE - 1 # want to wait over capture
+            else:
+                return self.CAPTURE_SCORE - 1 # would rather capture, but this over all else otherwise
+        else:
+            score = self.MOVE_SCORE
+            if not self.space_safe(r, c): score += self.DANGER_SCORE
         return score
 
     def score_wait(self):
