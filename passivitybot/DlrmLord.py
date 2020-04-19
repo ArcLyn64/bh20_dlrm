@@ -36,13 +36,15 @@ class Lord:
 
     def space_safe(self, r, c):
         """
-        A space is safe if it is protected by an ally or not attacked by an enemy
+        A space is safe if it is not attacked (passivity)
         """
         # check if the space is defended by friendly pawn
+        """
         friend_left = (r - self.forward, c + self.left)
         friend_right = (r - self.forward, c + self.right)
         if self.check_loc(friend_left) == self.team or self.check_loc(friend_right) == self.team:
             return True
+        """
         # check if the space is under attack
         enemy_left = (r + self.forward, c + self.left)
         enemy_right = (r + self.forward, c + self.right)
@@ -51,8 +53,6 @@ class Lord:
         return True
 
     def score_col(self, c):
-        if not c:
-            return -1 # better than giving up a win, but we still don't want to NOT spawn
         if self.check_space(self.targetrow, c) == self.team:
             return -1 # we finished this row, naive row by row strat doesn't want to use it
         if not self.space_safe(self.spawnrow, c):
@@ -68,11 +68,6 @@ class Lord:
         return 1
 
     def try_spawn(self, c):
-        """
-        attempt to spawn on column c. if c is None, do not spawn and return True.
-        """
-        if not c:
-            return True
         if not self.check_space(self.spawnrow, c):
             spawn(self.spawnrow, c)
             return True
@@ -80,7 +75,7 @@ class Lord:
 
     def turn(self):
         self.round = self.round + 1
-        scores = [(self.score_col(c), c) for c in list(range(self.board_size)) + [None]] 
+        scores = [(self.score_col(c), c) for c in range(self.board_size)] 
         # sorts in place by highest score first, then orders equal scores randomly
         scores.sort(reverse=True, key=lambda x:(x[0], random.randint(0, self.board_size)))
         dlog("scores: " + str(scores))
