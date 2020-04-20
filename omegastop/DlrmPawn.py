@@ -4,11 +4,144 @@ DEBUG = 1
 def dlog(s):
     if DEBUG > 0: log(s)
 
+class Patterns:
+    """
+    Use 's' for self because it won't get checked for that way (is implied)
+
+    formatting for pattern recognition:
+    all done from black's perspective (up is forward)
+    """
+    CHAIN_SHORT_LEFT = [
+            str.split(". . . . ."),
+            str.split(". O . . ."),
+            str.split(". . s . ."),
+            str.split(". . . . ."),
+            str.split(". . . . .")
+            ]
+
+    CHAIN_SHORT_RIGHT = [
+            str.split(". . . . ."),
+            str.split(". . . O ."),
+            str.split(". . s . ."),
+            str.split(". . . . ."),
+            str.split(". . . . .")
+            ]
+
+    CHAIN_LONG_LEFT = [
+            str.split("O . . . ."),
+            str.split(". O . . ."),
+            str.split(". . s . ."),
+            str.split(". . . . ."),
+            str.split(". . . . .")
+            ]
+
+    CHAIN_LONG_RIGHT = [
+            str.split(". . . . O"),
+            str.split(". . . O ."),
+            str.split(". . s . ."),
+            str.split(". . . . ."),
+            str.split(". . . . .")
+            ]
+
+    SPEAR_TIP = [
+            str.split(". . . . ."),
+            str.split(". . . . ."),
+            str.split(". . s . ."),
+            str.split(". O . O ."),
+            str.split(". . . . .")
+            ]
+
+    CAP_LEFT = [
+            str.split(". . . . ."),
+            str.split(". X . . ."),
+            str.split(". . s . ."),
+            str.split(". . . . ."),
+            str.split(". . . . .")
+            ]
+
+    CAP_RIGHT = [
+            str.split(". . . . ."),
+            str.split(". . . X ."),
+            str.split(". . s . ."),
+            str.split(". . . . ."),
+            str.split(". . . . .")
+            ]
+
+    CAN_MOVE = [
+            str.split(". . . . ."),
+            str.split(". . _ . ."),
+            str.split(". . s . ."),
+            str.split(". . . . ."),
+            str.split(". . . . .")
+            ]
+
+    STALEMATE_LEFT = [
+            str.split(". X . . ."),
+            str.split(". . . . ."),
+            str.split(". . s . ."),
+            str.split(". . . . ."),
+            str.split(". . . . .")
+            ]
+
+    STALEMATE_RIGHT = [
+            str.split(". . . X ."),
+            str.split(". . . . ."),
+            str.split(". . s . ."),
+            str.split(". . . . ."),
+            str.split(". . . . .")
+            ]
+
+    BLOCKED = [
+            str.split(". . . . ."),
+            str.split(". . X . ."),
+            str.split(". . s . ."),
+            str.split(". . . . ."),
+            str.split(". . . . .")
+            ]
+
+"""
+----------------------------------------------------------
+"""
+
+# Pawn class things
 VIEW_DIST = 2
+RANGE = 5
 
 class Pawn:
 
     WAIT_BEFORE_CAPTURE = 5
+
+    def generate_check_position_function(self, *argv):
+        """
+        Takes in any number of 5x5 matrix that indicates the total viewspace of the pawn
+        X are enemies
+        O are friendlies
+        _ are empty spaces
+        anything else we don't care about
+        generates a function which checks if we match any of those patterns
+        """
+        ENEMY = 'X'
+        FRIEND = 'O'
+        EMPTY = '_'
+        functions = []
+        for mat in argv:
+            bool_checks = []
+            for i in range(RANGE):
+                for j in range(RANGE):
+                    r = (VIEW_DIST - i) * self.forward
+                    c = (VIEW_DIST - j) * self.forward
+                    if mat[i][j] == ENEMY:
+                        bool_checks.append(lambda y, x: (self.check_space(y + r, x + c) == self.opp_team))
+                    if mat[i][j] == FRIEND:
+                        bool_checks.append(lambda y, x: (self.check_space(y + r, x + c) == self.team))
+                    if mat[i][j] == EMPTY:
+                        bool_checks.append(lambda y, x: (self.check_space(y + r, x + c) == None))
+            functions.append(lambda r, c: any([b(r, c) for b in bool_checks]))
+        def full_check():
+            r, c = self.loc()
+            return any([f(r, c) for f in functions])
+        dlog("completed a run!")
+        return full_check
 
     def __init__(self, bs, t):
         self.board_size = bs
@@ -21,6 +154,14 @@ class Pawn:
         self.right = self.forward * -1
         self.capture_timer = self.WAIT_BEFORE_CAPTURE
         self.action = self.march
+
+        """
+        Generate pattern functions
+        """
+        gpf = self.generate_check_position_function # alias for brevity
+        self.can_capture_left = gpf(Patterns.CAP_LEFT)
+        self.can_capture_right = gpf(Patterns.CAP_RIGHT)
+        self.can_move = gpf(Patterns.CAN_MOVE)
 
     def loc(self):
         return get_location()
@@ -42,11 +183,6 @@ class Pawn:
     def check_inview(self, r, c):
         rpos, cpos = self.loc()
         return -VIEW_DIST <= r - rpos <= VIEW_DIST and -VIEW_DIST <= c-cpos <= VIEW_DIST
-
-    def can_move(self):
-        r, c = self.loc()
-        r += self.forward
-        return self.check_inbounds(r, c) and not self.check_space(r, c)
 
     def try_move(self):
         if self.can_move():
@@ -72,32 +208,15 @@ class Pawn:
             return False
         return True
 
-    def can_capture_left(self):
-        return self.can_capture(False)
-
     def try_capture_left(self):
-        return self.try_capture(False)
-
-    def can_capture_right(self):
-        return self.can_capture(True)
+        if self.can_capture_left():
+            return capture(r + self.forward, r + self.left)
+        return False;
 
     def try_capture_right(self):
-        return self.try_capture(True)
-
-    def can_capture(self, isRight):
-        r, c = self.loc()
-        r += self.forward
-        c += self.right if isRight else self.left
-        return self.check_space(r, c) == self.opp_team
-
-    def try_capture(self, isRight):
-        r, c = self.loc()
-        r += self.forward
-        c += self.right if isRight else self.left
-        if self.can_capture(isRight):
-            capture(r, c)
-            return True
-        return False
+        if self.can_capture_right():
+            return capture(r + self.forward, r + self.right)
+        return False;
 
     def wait(self):
         """
@@ -106,91 +225,18 @@ class Pawn:
         """
         return True
 
-    def check_doubled(self):
-        r, c = self.loc()
-        r -= self.forward
-        return self.check_space(r, c) == self.team
-
-    """
-    Scoring
-    """
-
-    WAIT_SCORE = 0
-    CAPTURE_SCORE = 6
-    DANGER_SCORE = -3
-    MOVE_SCORE = 2
-
-    def score_action(self, action):
+    def should_move(self):
         """
-        takes in one of the following:
-            try_capture_left
-            try_capture_right
-            try_move
-            wait
-        and scores the quality of that action
-        wait is a default action taken only when all other options are bad
+        Checks if we should move forward (can move and space safe)
         """
-        d = {}
-        d[self.try_capture_left] = self.score_capture_left
-        d[self.try_capture_right] = self.score_capture_right
-        d[self.try_move] = self.score_move
-        d[self.wait] = self.score_wait
-        return d[action]()
-
-    def score_capture_left(self):
-        return self.score_capture(False)
-
-    def score_capture_right(self):
-        return self.score_capture(True)
-
-    def score_capture(self, isRight):
         r, c = self.loc()
-        r += self.forward
-        c += self.right if isRight else self.left
-        score = self.CAPTURE_SCORE
-        if not self.space_safe(r, c): score += self.DANGER_SCORE
-        return score
-
-    def score_move(self):
-        r, c = self.loc()
-        r += self.forward
-        if r == self.targetrow:
-            if not self.capture_timer <= 0:
-                self.capture_timer = self.capture_timer - 1
-                return self.WAIT_SCORE - 1 # want to wait over capture
-            else:
-                return self.CAPTURE_SCORE - 1 # would rather capture, but this over all else otherwise
-        else:
-            score = self.MOVE_SCORE
-            if not self.space_safe(r, c): score += self.DANGER_SCORE
-        return score
-
-    def score_wait(self):
-        return self.WAIT_SCORE
-
-    def log_scores(self, scores):
-        d = {}
-        d[self.try_capture_left] = "cap left"
-        d[self.try_capture_right] = "cap right"
-        d[self.try_move] = "move"
-        d[self.wait] = "wait"
-        scores = [(s[0], d[s[1]]) for s in scores]
-        dlog("scores: " + str(scores))
+        return self.can_move() and self.space_safe(r+self.forward, c)
 
     def turn(self):
         self.action = self.action()
 
     def march(self):
-        # what actions can we perform?
-        actions = [self.wait]
-        if self.can_capture_left(): actions.append(self.try_capture_left)
-        if self.can_capture_right(): actions.append(self.try_capture_right)
-        if self.can_move(): actions.append(self.try_move)
-
-        scores = [(self.score_action(a), a) for a in actions]
-        # sort by highest score, then randomly
-        scores.sort(reverse=True, key=lambda x:(x[0], random.randint(0, len(actions))))
-        self.log_scores(scores)
-        for _,a in scores:
+        protocol = [self.try_capture_left, self.try_capture_right, self.should_move, self.wait]
+        for a in protocol:
             if a(): break
         return self.march
