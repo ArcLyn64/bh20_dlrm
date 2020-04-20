@@ -1,5 +1,9 @@
 import random
 
+DEBUG = 1
+def dlog(s):
+    if DEBUG > 0: log(s)
+
 class Patterns:
     """
     Use 's' for self because it won't get checked for that way (is implied)
@@ -140,11 +144,14 @@ class PatternWriter:
         function_full = "    " + function_full.replace("\n", "\n    ") # indent
         return function_full + "\n\n"
 
-gpf = PatternWriter.generate_pattern_function
+def main():
+    gpf = PatternWriter.generate_pattern_function
+    f = open("DlrmPawn.py", "a")
+    f.write("\n# New Write, make sure to delete any above writes to avoid duplicate definitions\n")
+    f.write(gpf("can_move", Patterns.CAN_MOVE))
+    f.write(gpf("can_capture_left", Patterns.CAP_LEFT))
+    f.write(gpf("can_capture_right", Patterns.CAP_RIGHT))
+    f.close()
 
-f = open("DlrmPawn.py", "a")
-f.write("\n# New Write, make sure to delete any above writes to avoid duplicate definitions\n")
-f.write(gpf("can_move", Patterns.CAN_MOVE))
-f.write(gpf("can_capture_left", Patterns.CAP_LEFT))
-f.write(gpf("can_capture_right", Patterns.CAP_RIGHT))
-f.close()
+if __name__ == "__main__":
+    main()

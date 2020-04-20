@@ -1,8 +1,5 @@
 import random
-
-DEBUG = 1
-def dlog(s):
-    if DEBUG > 0: log(s)
+import bh_util as util
 
 # Pawn class things
 VIEW_DIST = 2
@@ -106,4 +103,15 @@ class Pawn:
     Generated Functions Below
     ------------------------------------------------------------
     """
+
+
+# New Write, make sure to delete any above writes to avoid duplicate definitions
+    def can_move(self):
+        return (self.check_space(r + self.forward, c) == None)
+
+    def can_capture_left(self):
+        return (self.check_space(r + self.forward, c + self.left) == self.opp_team)
+
+    def can_capture_right(self):
+        return (self.check_space(r + self.forward, c + self.right) == self.opp_team)
 
