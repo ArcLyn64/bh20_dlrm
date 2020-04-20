@@ -112,7 +112,7 @@ class Pawn:
     """
 
     WAIT_SCORE = 0
-    CAPTURE_VALUE = 8
+    CAPTURE_VALUE = 6
     DANGER_VALUE = -3
     MOVE_VALUE = 2
     DOUBLED_VALUE = 2

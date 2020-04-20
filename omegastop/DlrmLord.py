@@ -16,6 +16,7 @@ class Lord:
         self.left = self.forward * 1
         self.right = self.forward * -1
         self.round = 0
+        self.action = self.earlygame
 
     def board(self):
         return get_board()
@@ -110,6 +111,9 @@ class Lord:
         return False
 
     def turn(self):
+        self.action = self.action()
+
+    def earlygame(self):
         self.round = self.round + 1
         scores = [(self.score_col(c), c) for c in range(self.board_size)] 
         # sorts in place by highest score first, then orders equal scores randomly
@@ -117,3 +121,4 @@ class Lord:
         dlog("scores: " + str(scores))
         for _,c in scores:
             if self.try_spawn(c): break
+        return self.earlygame

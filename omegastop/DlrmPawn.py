@@ -20,6 +20,7 @@ class Pawn:
         self.left = self.forward * 1
         self.right = self.forward * -1
         self.capture_timer = self.WAIT_BEFORE_CAPTURE
+        self.action = self.march
 
     def loc(self):
         return get_location()
@@ -177,6 +178,9 @@ class Pawn:
         dlog("scores: " + str(scores))
 
     def turn(self):
+        self.action = self.action()
+
+    def march(self):
         # what actions can we perform?
         actions = [self.wait]
         if self.can_capture_left(): actions.append(self.try_capture_left)
@@ -189,3 +193,4 @@ class Pawn:
         self.log_scores(scores)
         for _,a in scores:
             if a(): break
+        return self.march
