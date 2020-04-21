@@ -1,6 +1,6 @@
 import random
 
-DEBUG = 1
+DEBUG = 0
 def dlog(s):
     if DEBUG > 0: log(s)
 

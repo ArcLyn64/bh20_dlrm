@@ -18,7 +18,7 @@ class Pawn:
         self.left = self.forward * 1
         self.right = self.forward * -1
         self.capture_timer = self.WAIT_BEFORE_CAPTURE
-        self.action = self.march
+        self.action = self.combat if self.enemy_spotted else self.advance
 
     def loc(self):
         return get_location()
@@ -66,14 +66,19 @@ class Pawn:
         return True
 
     def try_capture_left(self):
+        r, c = self.loc()
         if self.can_capture_left():
             return capture(r + self.forward, r + self.left)
         return False;
 
     def try_capture_right(self):
+        r, c = self.loc()
         if self.can_capture_right():
             return capture(r + self.forward, r + self.right)
         return False;
+
+    def try_capture(self):
+        return self.try_capture_left() or self.try_capture_right()
 
     def wait(self):
         """
@@ -87,16 +92,61 @@ class Pawn:
         Checks if we should move forward (can move and space safe)
         """
         r, c = self.loc()
-        return self.can_move() and self.space_safe(r+self.forward, c)
+        # only play aggressive if you're on an even column
+        if self.can_move() and ((c%2==0 and self.move_defended()) or not self.move_attacked()):
+            return self.try_move()
+        return False
 
     def turn(self):
         self.action = self.action()
 
-    def march(self):
-        protocol = [self.try_capture_left, self.try_capture_right, self.should_move, self.wait]
-        for a in protocol:
-            if a(): break
-        return self.march
+    def advance(self):
+        self.try_move()
+        return self.state_manager(self.advance)
+
+    def combat(self):
+        acted = False
+        if not acted and not self.move_attacked() and self.can_move_to_defend():
+            acted = self.try_move()
+        if not acted:
+            acted = self.try_capture()
+        if not acted and not self.move_attacked():
+            acted = self.try_move()
+        if not acted:
+            acted = self.wait()
+        return self.state_manager(self.combat)
+
+    def finished(self):
+        wait()
+        return self.state_manager(self.finished)
+
+    def threaten(self):
+        if self.can_capture_left():
+            self.try_capture_left()
+        elif self.can_capture_right():
+            self.try_capture_right()
+        elif not self.can_move():
+            self.capture_timer = 0
+        elif self.short_chain_ahead():
+            self.try_move()
+        elif self.capture_timer <= 0:
+            self.try_move()
+        else:
+            self.capture_timer = self.capture_timer - 1
+        return self.state_manager(self.threaten)
+
+    def state_manager(self, state):
+        r, c = self.loc()
+        if c == self.targetrow:
+            return self.finished
+        if c == self.targetrow - self.forward:
+            return self.threaten
+        if state == self.combat or self.enemy_spotted():
+            return self.combat
+        if state == self.advance:
+            return self.advance
+        return self.combat # default is to assume danger
+
     
     """
     ------------------------------------------------------------
@@ -104,14 +154,83 @@ class Pawn:
     ------------------------------------------------------------
     """
 
-
 # New Write, make sure to delete any above writes to avoid duplicate definitions
     def can_move(self):
-        return (self.check_space(r + self.forward, c) == None)
+        r, c = self.loc()
+        return (not self.check_space(r + self.forward, c))
 
     def can_capture_left(self):
+        r, c = self.loc()
         return (self.check_space(r + self.forward, c + self.left) == self.opp_team)
 
     def can_capture_right(self):
+        r, c = self.loc()
         return (self.check_space(r + self.forward, c + self.right) == self.opp_team)
+
+    def move_attacked(self):
+        r, c = self.loc()
+        return (self.check_space(r + (2*self.forward), c + self.left) == self.opp_team) or \
+        (self.check_space(r + (2*self.forward), c + self.right) == self.opp_team)
+
+    def move_defended(self):
+        r, c = self.loc()
+        return (self.check_space(r, c + self.left) == self.team) or \
+        (self.check_space(r, c + self.right) == self.team)
+
+    def can_move_to_defend(self):
+        r, c = self.loc()
+        return (self.check_space(r + (2*self.forward), c + self.left) == self.team and \
+        not self.check_space(r + self.forward, c)) or \
+        (self.check_space(r + (2*self.forward), c + self.right) == self.team and \
+        not self.check_space(r + self.forward, c))
+
+    def can_move_to_trade(self):
+        r, c = self.loc()
+        return (self.check_space(r + (2*self.forward), c + self.left) == self.opp_team and \
+        not self.check_space(r + self.forward, c) and \
+        self.check_space(r, c + self.left) == self.team) or \
+        (self.check_space(r + (2*self.forward), c + self.right) == self.opp_team and \
+        not self.check_space(r + self.forward, c) and \
+        self.check_space(r, c + self.left) == self.team) or \
+        (self.check_space(r + (2*self.forward), c + self.right) == self.opp_team and \
+        not self.check_space(r + self.forward, c) and \
+        self.check_space(r, c + self.right) == self.team) or \
+        (self.check_space(r + (2*self.forward), c + self.left) == self.opp_team and \
+        not self.check_space(r + self.forward, c) and \
+        self.check_space(r, c + self.right) == self.team)
+
+    def enemy_spotted(self):
+        r, c = self.loc()
+        return (self.check_space(r + (2*self.forward), c + (2*self.left)) == self.opp_team) or \
+        (self.check_space(r + (2*self.forward), c + self.left) == self.opp_team) or \
+        (self.check_space(r + (2*self.forward), c + (2*self.right)) == self.opp_team) or \
+        (self.check_space(r + (2*self.forward), c + self.right) == self.opp_team)
+
+    def short_chain_ahead(self):
+        r, c = self.loc()
+        return (self.check_space(r + self.forward, c + self.left) == self.team) or \
+        (self.check_space(r + self.forward, c + self.right) == self.team)
+
+    def long_chain_ahead(self):
+        r, c = self.loc()
+        return (self.check_space(r + (2*self.forward), c + (2*self.left)) == self.team and \
+        self.check_space(r + self.forward, c + self.left) == self.team) or \
+        (self.check_space(r + (2*self.forward), c + (2*self.right)) == self.team and \
+        self.check_space(r + self.forward, c + self.right) == self.team)
+
+    def short_chain_behind(self):
+        r, c = self.loc()
+        return (self.check_space(r + (-1*self.forward), c + self.left) == self.team) or \
+        (self.check_space(r + (-1*self.forward), c + self.right) == self.team)
+
+    def long_chain_behind(self):
+        r, c = self.loc()
+        return (self.check_space(r + (-1*self.forward), c + self.left) == self.team and \
+        self.check_space(r + (-2*self.forward), c + (2*self.left)) == self.team) or \
+        (self.check_space(r + (-1*self.forward), c + self.right) == self.team and \
+        self.check_space(r + (-2*self.forward), c + (2*self.right)) == self.team)
+
+    def blocked(self):
+        r, c = self.loc()
+        return (self.check_space(r + self.forward, c) == self.opp_team)
 
